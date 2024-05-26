@@ -61,13 +61,14 @@ def send_password_mail(email, password):
         print(E)
         return False
 
-
+@permission_classes([AllowAny])
+@authentication_classes([])
 class TestView(APIView):
 
     def get(self, request):
         data = {'user': request.user}
         print(request.user)
-        return Response(str(data))
+        return Response("Hello")
 
 
 class UpdatePassword(APIView):
@@ -145,19 +146,37 @@ class ModelPredict(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def get(self):
-        dataset = load_breast_cancer()
-        df = pd.DataFrame(dataset.data, columns=dataset.feature_names)
+    def get(self, request):
+        df = pd.read_csv("C:\\Users\\mirac\\Desktop\\Tutorials\\Breast Cancer\\backend\\mainapp\\wiscosin dataset.csv")
+        # df = pd.DataFrame(dataset.data, columns=dataset.feature_names)
 
-        df['target'] = dataset.target
+        # df['target'] = dataset.target
+        df = df.dropna(axis=1)
+        del df["id"]
 
-        X = df[dataset.feature_names].copy()
-        y = df['target']
+        df['diagnosis'] = df['diagnosis'].map({"M": 1, "B": 0})
 
-        scale = StandardScaler()
-        X_scaled = scale.fit_transform(X)
+        X = df.drop("diagnosis", axis=1) # df[dataset.feature_names].copy()
+        y = df["diagnosis"]
 
-        X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, train_size=.8, random_state=3)
+        print(X.iloc[1])
+
+        # scale = StandardScaler()
+        # scale.fit(X)
+        # X_scaled = scale.transform(X)
+        #
+        # X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, train_size=.8, random_state=3)
+        #
+        # model = SVC()
+        # model.fit(X_train, y_train)
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
+
+        print(X_train)
 
         model = SVC()
         model.fit(X_train, y_train)
@@ -167,21 +186,28 @@ class ModelPredict(APIView):
         with open(os.path.join(__location__, 'svm_model.pickle'), 'wb') as f:
             pickle.dump(model, f)
 
+        with open(os.path.join(__location__, 'scaler.pickle'), 'wb') as f:
+            pickle.dump(scaler, f)
+
         return Response('ok')
 
 
     def post(self, request):
-        df = pd.DataFrame(request.data, index=[0])
-
-        scaler = StandardScaler()
-        data = scaler.fit_transform(df)
 
         __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+        df = pd.DataFrame([request.data])
+
+        pickle_in = open(os.path.join(__location__, 'scaler.pickle'), "rb")
+        scaler = pickle.load(pickle_in)
+
+        data = scaler.transform(df)
 
         pickle_in = open(os.path.join(__location__, 'svm_model.pickle'), "rb")
         model = pickle.load(pickle_in)
 
         svm_predict = model.predict(data)
+        print(svm_predict)
 
         if svm_predict[0] == 0:
             result = 'Benign'
