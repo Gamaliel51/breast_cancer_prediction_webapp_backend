@@ -148,27 +148,14 @@ class ModelPredict(APIView):
 
     def get(self, request):
         df = pd.read_csv("C:\\Users\\mirac\\Desktop\\Tutorials\\Breast Cancer\\backend\\mainapp\\wiscosin dataset.csv")
-        # df = pd.DataFrame(dataset.data, columns=dataset.feature_names)
-
-        # df['target'] = dataset.target
+        
         df = df.dropna(axis=1)
         del df["id"]
 
         df['diagnosis'] = df['diagnosis'].map({"M": 1, "B": 0})
 
-        X = df.drop("diagnosis", axis=1) # df[dataset.feature_names].copy()
+        X = df.drop("diagnosis", axis=1)
         y = df["diagnosis"]
-
-        print(X.iloc[1])
-
-        # scale = StandardScaler()
-        # scale.fit(X)
-        # X_scaled = scale.transform(X)
-        #
-        # X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, train_size=.8, random_state=3)
-        #
-        # model = SVC()
-        # model.fit(X_train, y_train)
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
@@ -210,9 +197,9 @@ class ModelPredict(APIView):
         print(svm_predict)
 
         if svm_predict[0] == 0:
-            result = 'Benign'
+            result = 'The Patient has a benign neoplasm'
         else:
-            result = 'Malignant'
+            result = 'The Patient has a malignant neoplasm'
 
         return Response({'result': result})
 
